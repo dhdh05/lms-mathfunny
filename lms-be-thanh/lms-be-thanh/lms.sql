@@ -24,20 +24,50 @@ CREATE TABLE courses (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   is_public TINYINT(1) DEFAULT 0,
   teacher_id INT,
+  target_age_group VARCHAR(50) DEFAULT NULL COMMENT 'Do tuoi muc tieu',
   FOREIGN KEY (teacher_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) UNIQUE NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE,
   password VARCHAR(255) NOT NULL,
   full_name VARCHAR(100) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  role ENUM('admin','student','teacher') DEFAULT 'student',
+  role ENUM('admin','student','teacher','parent') DEFAULT 'student',
   email_verified BOOLEAN DEFAULT FALSE,
   verification_token VARCHAR(255),
-  avatar VARCHAR(255) DEFAULT NULL
+  avatar VARCHAR(255) DEFAULT NULL,
+  phone VARCHAR(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- [V3 MERGE] Bang thong tin chi tiet cho Giao vien
+CREATE TABLE teachers (
+  user_id INT PRIMARY KEY,
+  subject VARCHAR(100) DEFAULT NULL,
+  bio TEXT DEFAULT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- [V3 MERGE] Bang thong tin chi tiet cho Phu huynh
+CREATE TABLE parents (
+  user_id INT PRIMARY KEY,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- [V3 MERGE] Bang thong tin chi tiet cho Hoc sinh (Kids)
+CREATE TABLE students (
+  user_id INT PRIMARY KEY,
+  parent_id INT DEFAULT NULL,
+  teacher_id INT DEFAULT NULL, -- Giao vien chu nhiem hoac quan ly chinh
+  date_of_birth DATE DEFAULT NULL,
+  quick_login_code VARCHAR(10) DEFAULT NULL COMMENT 'Ma dang nhap nhanh cho tre em',
+  total_stars INT DEFAULT 0 COMMENT 'Tich diem thuong',
+  streak_days INT DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES parents(user_id) ON DELETE SET NULL,
+  FOREIGN KEY (teacher_id) REFERENCES teachers(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE videos (
@@ -96,6 +126,10 @@ CREATE TABLE quiz_questions (
   question_text TEXT NOT NULL,
   points INT DEFAULT 1,
   allows_multiple_correct TINYINT(1) DEFAULT 0,
+  -- [V3 MERGE] Ho tro am thanh va hinh anh cho cau hoi (Kids)
+  audio_url VARCHAR(255) DEFAULT NULL,
+  image_url VARCHAR(255) DEFAULT NULL,
+  question_type ENUM('multiple_choice', 'drag_drop', 'matching') DEFAULT 'multiple_choice',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -105,6 +139,8 @@ CREATE TABLE quiz_options (
   question_id INT NOT NULL,
   option_text TEXT NOT NULL,
   is_correct TINYINT(1) DEFAULT 0,
+  -- [V3 MERGE] Hinh anh cho dap an (Kids)
+  image_url VARCHAR(255) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -225,6 +261,41 @@ CREATE TABLE class_students (
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
     PRIMARY KEY (class_id, student_id)
 );
+
+-- [V3 MERGE] Bang phan thuong (Gamification)
+CREATE TABLE rewards (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  reward_title VARCHAR(100) NOT NULL,
+  image_url VARCHAR(255),
+  reason VARCHAR(255),
+  date_awarded DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (student_id) REFERENCES students(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- [V3 MERGE] Thong bao cho phu huynh
+CREATE TABLE parent_notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  parent_id INT NOT NULL,
+  message TEXT NOT NULL,
+  type ENUM('progress','test_result','reminder', 'system') DEFAULT 'progress',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_read TINYINT(1) DEFAULT 0,
+  FOREIGN KEY (student_id) REFERENCES students(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES parents(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- [V3 MERGE] Logs he thong
+CREATE TABLE logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT DEFAULT NULL,
+  action VARCHAR(255) NOT NULL,
+  ip_address VARCHAR(45),
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  details TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

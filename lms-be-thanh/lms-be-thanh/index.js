@@ -11,16 +11,16 @@ const searchRoutes = require('./src/routes/searchRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const classRoutes = require('./src/routes/classRoutes');
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 app.use(bodyParser.json());
 app.use(cors({
-    origin: [
-      'http://localhost:3000',
-      'https://frontend-lms-vwe3.onrender.com'
-    ],
-    credentials: true
-  }));
+  origin: [
+    'http://localhost:3000',
+    'https://frontend-lms-vwe3.onrender.com'
+  ],
+  credentials: true
+}));
 
 app.use('/teacher', teacherRoutes);
 app.use('/', lmsRoutes);
@@ -34,5 +34,5 @@ app.use('/users', userRoutes);
 app.use('/', classRoutes);
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
