@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: lms-frontend
+    runtime: node
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    buildCommand: npm ci && npm run build
